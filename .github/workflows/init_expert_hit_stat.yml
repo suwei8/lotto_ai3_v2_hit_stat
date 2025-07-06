@@ -3,15 +3,34 @@ name: 执行专家命中汇总生成 & 同步远程
 on:
   workflow_dispatch:
     inputs:
+      LOTTERY:
+        description: "彩票类型"
+        required: true
+        default: "全部"
+        type: choice
+        options:
+          - 全部
+          - 福彩3D
+          - 排列3
+          - 排列5
+          - 快乐8
+          - 双色球
+          - 大乐透
+
       MODE:
         description: "执行模式"
         required: true
-        default: "All"
+        default: "不启用"
         type: choice
         options:
           - All
           - Today
-          - 2025173
+          - 不启用
+
+      ISSUE:
+        description: "期号（可选）"
+        required: false
+
 
   # ✅ 每天定时增量
   schedule:
@@ -86,13 +105,29 @@ jobs:
 
       - name: Run init_expert_hit_stat.py
         env:
-          MYSQL_HOST: 127.0.0.1
-          MYSQL_PORT: 3306
-          MYSQL_USER: root
-          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          LOTTERY: ${{ github.event.inputs.LOTTERY }}
+          MODE: ${{ github.event.inputs.MODE }}
+          ISSUE: ${{ github.event.inputs.ISSUE }}
         run: |
-          python scripts/init_expert_hit_stat.py ${{ github.event.inputs.MODE || 'Today' }}
+          echo "🎯 选择：$LOTTERY"
+          echo "🎯 模式：$MODE"
+          echo "🎯 期号：$ISSUE"
+          
+          if [[ "$ISSUE" != "" ]]; then
+            if [[ "$LOTTERY" == "全部" ]]; then
+              echo "⚠️ 期号模式只能指定一个彩种，当前选择了全部，忽略"
+              exit 1
+            fi
+            python scripts/init_expert_hit_stat.py "$LOTTERY" "$ISSUE"
+          elif [[ "$MODE" != "不启用" ]]; then
+            if [[ "$LOTTERY" == "全部" ]]; then
+              python scripts/init_expert_hit_stat.py "$MODE"
+            else
+              python scripts/init_expert_hit_stat.py "$LOTTERY" "$MODE"
+            fi
+          else
+            echo "⚠️ 没有要执行的操作，全部跳过"
+          fi
 
       - name: Dump hit stat tables
         env:

@@ -232,7 +232,13 @@ if __name__ == "__main__":
     elif arg == "Today":
         for LOTTERY_NAME in LOTTERY_LIST:
             run_today(LOTTERY_NAME)
+    elif len(sys.argv) >= 2 and sys.argv[1] in LOTTERY_LIST and len(sys.argv) >= 3 and sys.argv[2].isdigit():
+        # python scripts/init_expert_hit_stat.py 大乐透 2025176
+        LOTTERY_NAME = sys.argv[1]
+        issue = sys.argv[2]
+        update_hit_stat(LOTTERY_NAME, issue)
     elif arg.isdigit():
+        # fallback，保留原来的，对所有彩种执行
         for LOTTERY_NAME in LOTTERY_LIST:
             update_hit_stat(LOTTERY_NAME, arg)
     else:
