@@ -13,6 +13,10 @@ on:
           - Today
           - 2025173
 
+  # ✅ 每天定时增量
+  schedule:
+    - cron: "0 15 * * *"  # == 北京时间 23:00
+
 jobs:
   hit-stat-job:
     runs-on: ubuntu-latest
@@ -79,7 +83,7 @@ jobs:
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
           MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
         run: |
-          python scripts/init_expert_hit_stat.py ${{ github.event.inputs.MODE }}
+          python scripts/init_expert_hit_stat.py ${{ github.event.inputs.MODE || 'Today' }}
 
       - name: Dump hit stat tables
         env:
@@ -121,8 +125,7 @@ jobs:
           mins=$((duration / 60))
           secs=$((duration % 60))
 
-          MESSAGE="✅ LottoAI3 命中汇总已完成！\n耗时：${mins}分${secs}秒\n模式：${MODE}\Actions编号：#${{ github.run_number }}"
-
+          MESSAGE="✅ LottoAI3 命中汇总已完成！\n耗时：${mins}分${secs}秒\n模式：${MODE}\nActions编号：#${{ github.run_number }}"
 
           echo "发送消息内容："
           echo "$MESSAGE"
