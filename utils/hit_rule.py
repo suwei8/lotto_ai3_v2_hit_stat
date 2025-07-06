@@ -49,21 +49,41 @@ def match_hit(playtype: str, numbers: str, open_code: str, blue_code: str = "") 
     elif playtype in ["杀5码", "杀8码", "杀10码"]:
         return len(nums_set & open_set) == 0  # 完全不能命中
 
-    # ✅ 大乐透命中判断（保留原逻辑）
-    if "红球" in playtype or "蓝球" in playtype or "杀蓝" in playtype:
+    # ✅ 大乐透专用命中规则（严格匹配）
+    if "红球" in playtype or "蓝球" in playtype or "龙头" in playtype or "凤尾" in playtype:
+        open_nums = re.findall(r"\d+", open_code) if open_code else []
         blue_nums = re.findall(r"\d+", blue_code) if blue_code else []
-        if "蓝" in playtype:
-            if "杀" in playtype:
-                return len(set(nums) & set(blue_nums)) == 0
-            elif "双" in playtype:
-                return len(set(nums) & set(blue_nums)) >= 2
-            else:
-                return len(set(nums) & set(blue_nums)) >= 1
-        else:
-            if "杀" in playtype:
-                return len(set(nums) & set(open_nums)) == 0
-            else:
+        nums = re.findall(r"\d+", numbers)
+
+        # 🎯 红球区
+        if "红球" in playtype:
+            if "独胆" in playtype:
                 return len(set(nums) & set(open_nums)) >= 1
+            elif "双胆" in playtype:
+                return len(set(nums) & set(open_nums)) >= 2
+            elif "三胆" in playtype:
+                return len(set(nums) & set(open_nums)) >= 3
+            elif "12码" in playtype or "20码" in playtype or "25码" in playtype:
+                # 必须包含全部开奖号
+                return all(str(n) in nums for n in open_nums)
+            elif "杀三" in playtype:
+                return len(set(nums) & set(open_nums)) < 3
+            elif "杀六" in playtype:
+                return len(set(nums) & set(open_nums)) == 0
+
+        # 🎯 龙头凤尾
+        elif "龙头" in playtype or "凤尾" in playtype:
+            return len(set(nums) & set(open_nums)) >= 2
+
+        # 🎯 蓝球区
+        elif "蓝球" in playtype:
+            if "定三" in playtype or "定五" in playtype:
+                return all(str(n) in nums for n in blue_nums)
+            elif "杀五" in playtype:
+                return len(set(nums) & set(blue_nums)) == 0
+
+        # 其他 → 默认命中失败
+        return False
 
     # ✅ 排列3/排列5/福彩3D命中判断（不改动）
     if len(open_nums) not in [3, 5]:

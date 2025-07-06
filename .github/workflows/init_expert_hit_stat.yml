@@ -53,12 +53,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Download DB backup
+      - name: Download latest database backup (auto)
         env:
           BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
         run: |
           mkdir -p data
-          wget -O data/lotto_backup.zip "https://github.com/suwei8/lotto_ai3_v2-Backup_data/releases/download/backup-20250706/lotto_20250706_backup.zip"
+          
+          # Get latest release info
+          LATEST_JSON=$(curl -s https://api.github.com/repos/suwei8/lotto_ai3_v2-Backup_data/releases/latest)
+
+          # Parse URL
+          DOWNLOAD_URL=$(echo $LATEST_JSON | jq -r '.assets[] | select(.name | endswith("_backup.zip")) | .browser_download_url')
+          
+          echo "✅ Latest backup URL: $DOWNLOAD_URL"
+          wget -O data/lotto_backup.zip "$DOWNLOAD_URL"
+          
           unzip -P "$BACKUP_PASSWORD" -o data/lotto_backup.zip -d data/
           ls -lh data/
 
