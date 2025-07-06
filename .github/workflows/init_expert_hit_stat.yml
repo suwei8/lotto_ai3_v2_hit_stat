@@ -111,7 +111,7 @@ jobs:
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
           MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
           LOTTERY: ${{ github.event.inputs.LOTTERY }}
-          MODE: ${{ github.event.inputs.MODE }}
+          MODE: ${{ github.event.inputs.MODE || '不启用' }}
           ISSUE: ${{ github.event.inputs.ISSUE }}
         run: |
           echo "🎯 选择：$LOTTERY"
