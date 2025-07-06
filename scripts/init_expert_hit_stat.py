@@ -11,6 +11,8 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
+# ✅ 彩种列表（必须与 workflow_dispatch 保持一致）
+LOTTERY_LIST = ["福彩3D", "排列3", "排列5", "快乐8", "双色球", "大乐透"]
 
 
 from utils.db import (
@@ -208,38 +210,32 @@ def run_today(lottery_name: str):
 
     conn.close()
 if __name__ == "__main__":
-    # ✅ 先获取连接，创建所有汇总表（如果不存在）
+    # ✅ 先建表
     conn = get_connection()
-    LOTTERY_LIST = ["福彩3D", "排列3", "排列5", "快乐8", "双色球", "大乐透"]
-
     for LOTTERY_NAME in LOTTERY_LIST:
         hit_stat_table = get_hit_stat_table(LOTTERY_NAME)
         ensure_hit_stat_table_exists(conn, hit_stat_table)
-
     conn.close()
 
-    # ✅ 检查参数
+    # ✅ 根据参数执行
     if len(sys.argv) < 2:
-        print("❌ 缺少参数：python scripts/init_expert_hit_stat.py [All|Today|期号]")
+        print("❌ 缺少参数：python scripts/init_expert_hit_stat.py [All|Today|LOTTERY ISSUE]")
         sys.exit(1)
 
     arg = sys.argv[1]
 
-    # ✅ 不管什么模式都循环全彩种
     if arg == "All":
         for LOTTERY_NAME in LOTTERY_LIST:
             run_all(LOTTERY_NAME)
     elif arg == "Today":
         for LOTTERY_NAME in LOTTERY_LIST:
             run_today(LOTTERY_NAME)
-    elif len(sys.argv) >= 2 and sys.argv[1] in LOTTERY_LIST and len(sys.argv) >= 3 and sys.argv[2].isdigit():
-        # python scripts/init_expert_hit_stat.py 大乐透 2025176
-        LOTTERY_NAME = sys.argv[1]
+    elif arg in LOTTERY_LIST and len(sys.argv) >= 3 and sys.argv[2].isdigit():
+        LOTTERY_NAME = arg
         issue = sys.argv[2]
         update_hit_stat(LOTTERY_NAME, issue)
     elif arg.isdigit():
-        # fallback，保留原来的，对所有彩种执行
-        for LOTTERY_NAME in LOTTERY_LIST:
-            update_hit_stat(LOTTERY_NAME, arg)
+        print("❌ 错误：单独传期号不允许，必须指定 LOTTERY")
+        sys.exit(1)
     else:
-        print(f"❌ 不支持参数：{arg}")
+        print(f"❌ 不支持的参数：{arg}")
