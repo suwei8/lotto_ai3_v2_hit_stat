@@ -32,6 +32,10 @@ jobs:
           --health-retries=5
 
     steps:
+      - name: Mark Start Time
+        id: start
+        run: echo "start_time=$(date +%s)" >> $GITHUB_ENV
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -99,3 +103,31 @@ jobs:
             echo "Importing $f to remote..."
             mysql -h $REMOTE_MYSQL_HOST -u$REMOTE_MYSQL_USER -p$REMOTE_MYSQL_PASSWORD $REMOTE_MYSQL_DATABASE < $f
           done
+
+      - name: Mark End Time
+        id: end
+        run: echo "end_time=$(date +%s)" >> $GITHUB_ENV
+
+
+      - name: Send WeChat Notify
+        env:
+          WECHAT_API_URL: ${{ secrets.WECHAT_API_URL }}
+          WECHAT_API_KEY: ${{ secrets.WECHAT_API_KEY }}
+          START: ${{ env.start_time }}
+          END: ${{ env.end_time }}
+          MODE: ${{ github.event.inputs.MODE }}
+        run: |
+          duration=$((END - START))
+          mins=$((duration / 60))
+          secs=$((duration % 60))
+
+          MESSAGE="✅ LottoAI3 命中汇总已完成！\n耗时：${mins}分${secs}秒\n模式：${MODE}\Actions编号：#${{ github.run_number }}"
+
+
+          echo "发送消息内容："
+          echo "$MESSAGE"
+
+          curl -X POST $WECHAT_API_URL \
+          -H "Content-Type: application/json" \
+          -H "x-api-key: $WECHAT_API_KEY" \
+          -d "{\"content\": \"${MESSAGE}\"}"

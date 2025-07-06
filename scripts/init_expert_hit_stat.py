@@ -12,9 +12,6 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
 
-# ✅ 修正 PYTHONPATH，保证找得到 utils
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(BASE_DIR)
 
 from utils.db import (
     get_connection,
