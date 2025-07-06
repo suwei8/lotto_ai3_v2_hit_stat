@@ -207,27 +207,25 @@ def run_today(lottery_name: str):
         update_hit_stat(lottery_name, issue)
 
     conn.close()
-
 if __name__ == "__main__":
-    # ✅ 先获取连接
+    # ✅ 先获取连接，创建所有汇总表（如果不存在）
     conn = get_connection()
+    LOTTERY_LIST = ["福彩3D", "排列3", "排列5", "快乐8", "双色球", "大乐透"]
 
-    # 🔄 遍历所有目标彩种，逐个确保汇总表存在
-    for LOTTERY_NAME in ["福彩3D", "排列3", "排列5", "快乐8", "双色球", "大乐透"]:
+    for LOTTERY_NAME in LOTTERY_LIST:
         hit_stat_table = get_hit_stat_table(LOTTERY_NAME)
         ensure_hit_stat_table_exists(conn, hit_stat_table)
 
     conn.close()
 
-    # ✅ 再根据参数跑全量、增量或单期
+    # ✅ 检查参数
     if len(sys.argv) < 2:
         print("❌ 缺少参数：python scripts/init_expert_hit_stat.py [All|Today|期号]")
         sys.exit(1)
 
     arg = sys.argv[1]
 
-    LOTTERY_LIST = ["福彩3D", "排列3", "排列5", "快乐8", "双色球", "大乐透"]
-
+    # ✅ 不管什么模式都循环全彩种
     if arg == "All":
         for LOTTERY_NAME in LOTTERY_LIST:
             run_all(LOTTERY_NAME)
@@ -235,7 +233,7 @@ if __name__ == "__main__":
         for LOTTERY_NAME in LOTTERY_LIST:
             run_today(LOTTERY_NAME)
     elif arg.isdigit():
-        LOTTERY_NAME = "福彩3D"
-        update_hit_stat(LOTTERY_NAME, arg)
+        for LOTTERY_NAME in LOTTERY_LIST:
+            update_hit_stat(LOTTERY_NAME, arg)
     else:
         print(f"❌ 不支持参数：{arg}")
