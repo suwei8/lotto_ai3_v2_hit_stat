@@ -105,6 +105,11 @@ jobs:
 
       - name: Run init_expert_hit_stat.py
         env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
           LOTTERY: ${{ github.event.inputs.LOTTERY }}
           MODE: ${{ github.event.inputs.MODE }}
           ISSUE: ${{ github.event.inputs.ISSUE }}
