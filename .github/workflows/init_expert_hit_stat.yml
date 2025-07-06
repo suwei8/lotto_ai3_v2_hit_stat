@@ -1,0 +1,101 @@
+name: 执行专家命中汇总生成 & 同步远程
+
+on:
+  workflow_dispatch:
+    inputs:
+      MODE:
+        description: "执行模式"
+        required: true
+        default: "All"
+        type: choice
+        options:
+          - All
+          - Today
+          - 2025173
+
+jobs:
+  hit-stat-job:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download DB backup
+        env:
+          BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
+        run: |
+          mkdir -p data
+          wget -O data/lotto_backup.zip "https://github.com/suwei8/lotto_ai3_v2-Backup_data/releases/download/backup-20250706/lotto_20250706_backup.zip"
+          unzip -P "$BACKUP_PASSWORD" -o data/lotto_backup.zip -d data/
+          ls -lh data/
+
+      - name: Decompress SQL if needed
+        run: |
+          gunzip -f data/*.sql.gz || echo "No gzip found, skip."
+
+      - name: Restore DB to local
+        env:
+          MYSQL_PWD: ${{ secrets.MYSQL_PASSWORD }}
+        run: |
+          for f in data/*.sql; do
+            echo "Restoring $f ..."
+            mysql -h 127.0.0.1 -uroot ${{ secrets.MYSQL_DATABASE }} < "$f"
+          done
+
+      - name: Run init_expert_hit_stat.py
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+        run: |
+          python scripts/init_expert_hit_stat.py ${{ github.event.inputs.MODE }}
+
+      - name: Dump hit stat tables
+        env:
+          MYSQL_PWD: ${{ secrets.MYSQL_PASSWORD }}
+        run: |
+          mkdir -p output
+          for table in expert_hit_stat_3d expert_hit_stat_p3 expert_hit_stat_p5 expert_hit_stat_klb expert_hit_stat_ssq expert_hit_stat_dlt; do
+            echo "Dumping $table ..."
+            mysqldump -h 127.0.0.1 -uroot ${{ secrets.MYSQL_DATABASE }} $table > output/$table.sql
+          done
+
+      # ✅ 上传备份到远程
+      - name: Restore to remote MySQL
+        env:
+          REMOTE_MYSQL_HOST: ${{ secrets.REMOTE_MYSQL_HOST }}
+          REMOTE_MYSQL_USER: ${{ secrets.REMOTE_MYSQL_USER }}
+          REMOTE_MYSQL_PASSWORD: ${{ secrets.REMOTE_MYSQL_PASSWORD }}
+          REMOTE_MYSQL_DATABASE: ${{ secrets.REMOTE_MYSQL_DATABASE }}
+        run: |
+          for f in output/*.sql; do
+            echo "Importing $f to remote..."
+            mysql -h $REMOTE_MYSQL_HOST -u$REMOTE_MYSQL_USER -p$REMOTE_MYSQL_PASSWORD $REMOTE_MYSQL_DATABASE < $f
+          done
