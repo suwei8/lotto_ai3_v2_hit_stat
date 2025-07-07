@@ -180,14 +180,27 @@ jobs:
           START: ${{ env.start_time }}
           END: ${{ env.end_time }}
           MODE: ${{ github.event.inputs.MODE }}
+          LOTTERY: ${{ github.event.inputs.LOTTERY }}
+          ISSUE: ${{ github.event.inputs.ISSUE }}
+          GITHUB_EVENT: ${{ github.event_name }}
         run: |
           duration=$((END - START))
           mins=$((duration / 60))
           secs=$((duration % 60))
 
-          MESSAGE="✅ LottoAI3 命中汇总已完成！\n耗时：${mins}分${secs}秒\n模式：${MODE}\nActions编号：#${{ github.run_number }}"
+          # 期号优先取 ISSUE，没有就写 "-"
+          ISSUE_VALUE=${ISSUE:-"-"}
 
-          echo "发送消息内容："
+          # 构造消息
+          MESSAGE="✅ LottoAI3 命中汇总已完成！\n"
+          MESSAGE+="Actions编号：#${{ github.run_number }}\n"
+          MESSAGE+="期号：${ISSUE_VALUE}\n"
+          MESSAGE+="🎯 触发类型: ${GITHUB_EVENT}\n"
+          MESSAGE+="🎯 最终 LOTTERY：${LOTTERY}\n"
+          MESSAGE+="🎯 最终 MODE：${MODE}\n"
+          MESSAGE+="耗时：${mins}分${secs}秒"
+
+          echo "✅ 即将发送的内容："
           echo "$MESSAGE"
 
           curl -X POST $WECHAT_API_URL \
