@@ -34,9 +34,7 @@ on:
 
   # ✅ 每天定时增量
   schedule:
-    - cron: "48 17 * * *"
-
-#    - cron: "50 14 * * *"  # == 北京时间 23:00
+    - cron: "50 14 * * *"
 
 jobs:
   hit-stat-job:
