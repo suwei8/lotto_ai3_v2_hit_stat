@@ -34,7 +34,9 @@ on:
 
   # ✅ 每天定时增量
   schedule:
-    - cron: "50 14 * * *"  # == 北京时间 23:00
+    - cron: "15 16 * * *"
+
+#    - cron: "50 14 * * *"  # == 北京时间 23:00
 
 jobs:
   hit-stat-job:
@@ -116,21 +118,26 @@ jobs:
           MYSQL_USER: root
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
           MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-          LOTTERY: ${{ github.event.inputs.LOTTERY }}
-          MODE: ${{ github.event.inputs.MODE || '不启用' }}
-          ISSUE: ${{ github.event.inputs.ISSUE }}
+          LOTTERY: ${{ github.event_name == 'schedule' && '全部' || github.event.inputs.LOTTERY }}
+          MODE: ${{ github.event_name == 'schedule' && 'All' || github.event.inputs.MODE }}
+          ISSUE: ${{ github.event.inputs.ISSUE || '' }}
         run: |
-          echo "🎯 选择：$LOTTERY"
-          echo "🎯 模式：$MODE"
-          echo "🎯 期号：$ISSUE"
-          
+          echo "=========================="
+          echo "🎯 触发类型: ${{ github.event_name }}"
+          echo "🎯 最终 LOTTERY：$LOTTERY"
+          echo "🎯 最终 MODE：$MODE"
+          echo "🎯 最终 ISSUE：$ISSUE"
+          echo "=========================="
+
           if [[ "$ISSUE" != "" ]]; then
+            echo "👉 判断：期号模式执行"
             if [[ "$LOTTERY" == "全部" ]]; then
-              echo "⚠️ 期号模式只能指定一个彩种，当前选择了全部，忽略"
+              echo "⚠️ 期号模式必须指定单个彩种，已选择全部，跳过"
               exit 1
             fi
             python scripts/init_expert_hit_stat.py "$LOTTERY" "$ISSUE"
           elif [[ "$MODE" != "不启用" ]]; then
+            echo "👉 判断：MODE 执行"
             if [[ "$LOTTERY" == "全部" ]]; then
               python scripts/init_expert_hit_stat.py "$MODE"
             else
