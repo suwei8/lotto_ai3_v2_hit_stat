@@ -34,7 +34,7 @@ on:
 
   # ✅ 每天定时增量
   schedule:
-    - cron: "0 15 * * *"  # == 北京时间 23:00
+    - cron: "30 15 * * *"  # == 北京时间 23:30
 
 jobs:
   hit-stat-job:
@@ -55,6 +55,12 @@ jobs:
           --health-retries=5
 
     steps:
+      - name: Debug Timezone Info
+        run: |
+          echo "==== 🕒 当前时间检查 ===="
+          echo "✅ 当前 UTC 时间: $(date -u '+%Y-%m-%d %H:%M:%S')"
+          echo "✅ 当前 北京时间: $(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M:%S')"
+          echo "========================"
       - name: Mark Start Time
         id: start
         run: echo "start_time=$(date +%s)" >> $GITHUB_ENV
