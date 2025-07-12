@@ -85,6 +85,7 @@ def match_hit(playtype: str, numbers: str, open_code: str, blue_code: str = "") 
         # 其他 → 默认命中失败
         return False
 
+
     # ✅ 排列3/排列5/福彩3D命中判断（不改动）
     if len(open_nums) not in [3, 5]:
         return False
@@ -138,3 +139,39 @@ def match_hit(playtype: str, numbers: str, open_code: str, blue_code: str = "") 
         return len(set(nums) & {open_nums[2]}) >= 1
 
     return False
+
+
+def count_hit_numbers_by_playtype(playtype_name: str, pred_numbers: str, open_code: str, lottery_name: str = "") -> int:
+    """
+    根据彩票类型 + 玩法名判断推荐数字与开奖号码之间的命中数量。
+    - 定位玩法：按位命中（只适用于福彩3D、排列3、排列5）
+    - 非定位玩法：用交集判断
+
+    参数:
+    - playtype_name: 玩法名，如 "百位定3", "定位3*3*3-个位"
+    - pred_numbers: 推荐数字字符串，如 "2,4,6"
+    - open_code: 开奖号字符串，如 "7,4,4"
+    - lottery_name: 彩票类型，如 "福彩3D"
+
+    返回:
+    - 命中数字数量（int）
+    """
+    pred_list = [int(n) for n in pred_numbers.strip().split(",") if n.strip().isdigit()]
+    open_list = [int(n) for n in open_code.strip().split(",") if n.strip().isdigit()]
+
+    # ✅ 使用 expert_hit_analysis.py 中定义的 POSITION_NAME_MAP 规则
+    if lottery_name in ["排列5", "排列五"]:
+        position_map = {"万位": 0, "千位": 1, "百位": 2, "十位": 3, "个位": 4}
+    elif lottery_name in ["福彩3D", "排列3"]:
+        position_map = {"百位": 0, "十位": 1, "个位": 2}
+    else:
+        position_map = {}  # 非定位彩种
+
+    for pos_name, idx in position_map.items():
+        if pos_name in playtype_name:
+            if len(open_list) <= idx:
+                return 0
+            return 1 if open_list[idx] in pred_list else 0
+
+    # 非定位玩法统一使用交集判断
+    return len(set(pred_list) & set(open_list))

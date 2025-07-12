@@ -22,7 +22,8 @@ from utils.db import (
     get_hit_stat_table,
     LOTTERIES_WITH_BLUE
 )
-from utils.hit_rule import match_hit
+from utils.hit_rule import count_hit_numbers_by_playtype, match_hit
+
 
 def ensure_hit_stat_table_exists(conn, table_name: str):
     """
@@ -114,9 +115,10 @@ def update_hit_stat(lottery_name: str, issue_name: str):
             if match_hit(playtype_name, row["numbers"], open_code, blue_code):
                 hit_count += 1
 
-            open_nums = set(map(int, open_code.split(",")))
-            pred_nums = set(int(n) for n in row["numbers"].split(",") if n.strip().isdigit())
-            hit_number_count += len(open_nums & pred_nums)
+            # ✅ 使用标准命中数字统计逻辑
+            hit_number_count += count_hit_numbers_by_playtype(
+                playtype_name, row["numbers"], open_code, lottery_name
+            )
 
         avg_hit_gap = round(total_count / hit_count, 2) if hit_count else None
 
