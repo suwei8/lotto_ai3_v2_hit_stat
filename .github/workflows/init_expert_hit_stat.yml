@@ -31,7 +31,6 @@ on:
         description: "期号（可选）"
         required: false
 
-
   # ✅ 每天定时增量
   schedule:
     - cron: "50 14 * * *"
@@ -55,51 +54,70 @@ jobs:
           --health-retries=5
 
     steps:
+      # 🧹 Step 1: 清理磁盘空间（释放10GB左右）
+      - name: Free disk space
+        run: |
+          echo "==== 🧹 清理磁盘空间前 ===="
+          df -h
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          docker system prune -af || true
+          sudo apt-get clean
+          echo "==== ✅ 清理后磁盘空间 ===="
+          df -h
+
+      # 🕒 调试时间信息
       - name: Debug Timezone Info
         run: |
           echo "==== 🕒 当前时间检查 ===="
           echo "✅ 当前 UTC 时间: $(date -u '+%Y-%m-%d %H:%M:%S')"
           echo "✅ 当前 北京时间: $(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M:%S')"
           echo "========================"
+
+      # ⏱️ 记录开始时间
       - name: Mark Start Time
         id: start
         run: echo "start_time=$(date +%s)" >> $GITHUB_ENV
 
+      # 🧾 拉取代码
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 🐍 安装 Python
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # 📦 安装依赖
       - name: Install requirements
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # 📊 检查磁盘空间（防止恢复数据库前已满）
+      - name: Check disk usage before DB restore
+        run: df -h
+
+      # 💾 下载最新数据库备份
       - name: Download latest database backup (auto)
         env:
           BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
         run: |
           mkdir -p data
-          
-          # Get latest release info
+          echo "🕵️ 获取最新 Backup release ..."
           LATEST_JSON=$(curl -s https://api.github.com/repos/suwei8/lotto_ai3_v2-Backup_data/releases/latest)
-
-          # Parse URL
           DOWNLOAD_URL=$(echo $LATEST_JSON | jq -r '.assets[] | select(.name | endswith("_backup.zip")) | .browser_download_url')
-          
           echo "✅ Latest backup URL: $DOWNLOAD_URL"
           wget -O data/lotto_backup.zip "$DOWNLOAD_URL"
-          sleep 1
           unzip -P "$BACKUP_PASSWORD" -o data/lotto_backup.zip -d data/
           ls -lh data/
 
+      # 🗜️ 解压 SQL 文件（如有 gzip）
       - name: Decompress SQL if needed
         run: |
           gunzip -f data/*.sql.gz || echo "No gzip found, skip."
 
+      # 🧩 导入本地 MySQL 容器
       - name: Restore DB to local
         env:
           MYSQL_PWD: ${{ secrets.MYSQL_PASSWORD }}
@@ -109,6 +127,7 @@ jobs:
             mysql -h 127.0.0.1 -uroot ${{ secrets.MYSQL_DATABASE }} < "$f"
           done
 
+      # 🎯 运行命中统计脚本
       - name: Run init_expert_hit_stat.py
         env:
           MYSQL_HOST: 127.0.0.1
@@ -145,6 +164,7 @@ jobs:
             echo "⚠️ 没有要执行的操作，全部跳过"
           fi
 
+      # 📤 导出统计表
       - name: Dump hit stat tables
         env:
           MYSQL_PWD: ${{ secrets.MYSQL_PASSWORD }}
@@ -155,7 +175,7 @@ jobs:
             mysqldump -h 127.0.0.1 -uroot ${{ secrets.MYSQL_DATABASE }} $table > output/$table.sql
           done
 
-      # ✅ 上传备份到远程
+      # 🚀 上传到远程 MySQL
       - name: Restore to remote MySQL
         env:
           REMOTE_MYSQL_HOST: ${{ secrets.REMOTE_MYSQL_HOST }}
@@ -168,11 +188,20 @@ jobs:
             mysql -h $REMOTE_MYSQL_HOST -u$REMOTE_MYSQL_USER -p$REMOTE_MYSQL_PASSWORD $REMOTE_MYSQL_DATABASE < $f
           done
 
+      # 🧹 Step 3: 清理临时文件，释放空间
+      - name: Clean up temporary files
+        if: always()
+        run: |
+          echo "==== 🧹 删除 data/ 和 output/ 目录 ===="
+          rm -rf data output
+          df -h
+
+      # ⏱️ 记录结束时间
       - name: Mark End Time
         id: end
         run: echo "end_time=$(date +%s)" >> $GITHUB_ENV
 
-
+      # 💬 WeChat 通知
       - name: Send WeChat Notify
         env:
           WECHAT_API_URL: ${{ secrets.WECHAT_API_URL }}
@@ -187,11 +216,8 @@ jobs:
           duration=$((END - START))
           mins=$((duration / 60))
           secs=$((duration % 60))
-
-          # 期号优先取 ISSUE，没有就写 "-"
           ISSUE_VALUE=${ISSUE:-"-"}
 
-          # 构造消息
           MESSAGE="✅ LottoAI3 命中汇总已完成！\n"
           MESSAGE+="Actions编号：#${{ github.run_number }}\n"
           MESSAGE+="期号：${ISSUE_VALUE}\n"
