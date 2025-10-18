@@ -32,8 +32,8 @@ on:
         required: false
 
   # ✅ 每天定时增量
-  schedule:
-    - cron: "50 14 * * *"
+  #  schedule:
+  #    - cron: "50 14 * * *"
 
 jobs:
   hit-stat-job:
