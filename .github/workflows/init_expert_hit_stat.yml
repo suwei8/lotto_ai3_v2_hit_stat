@@ -180,13 +180,15 @@ jobs:
       - name: Restore to remote MySQL
         env:
           REMOTE_MYSQL_HOST: ${{ secrets.REMOTE_MYSQL_HOST }}
+          REMOTE_MYSQL_PORT: ${{ secrets.REMOTE_MYSQL_PORT }}
           REMOTE_MYSQL_USER: ${{ secrets.REMOTE_MYSQL_USER }}
           REMOTE_MYSQL_PASSWORD: ${{ secrets.REMOTE_MYSQL_PASSWORD }}
           REMOTE_MYSQL_DATABASE: ${{ secrets.REMOTE_MYSQL_DATABASE }}
         run: |
           for f in output/*.sql; do
             echo "Importing $f to remote..."
-            mysql -h $REMOTE_MYSQL_HOST -u$REMOTE_MYSQL_USER -p$REMOTE_MYSQL_PASSWORD $REMOTE_MYSQL_DATABASE < $f
+            mysql -h $REMOTE_MYSQL_HOST -P $REMOTE_MYSQL_PORT \
+              -u$REMOTE_MYSQL_USER -p$REMOTE_MYSQL_PASSWORD $REMOTE_MYSQL_DATABASE < $f
           done
 
       # 🧹 Step 3: 清理临时文件，释放空间
