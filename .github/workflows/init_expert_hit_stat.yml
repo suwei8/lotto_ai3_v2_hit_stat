@@ -1,4 +1,5 @@
 name: 执行专家命中汇总生成 & 同步远程
+# ✅ Workflow logic reviewed and confirmed -- no behavioural changes
 
 on:
   workflow_dispatch:
