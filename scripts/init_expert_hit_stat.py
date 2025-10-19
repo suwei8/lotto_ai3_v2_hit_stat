@@ -342,12 +342,19 @@ if __name__ == "__main__":
         for LOTTERY_NAME in LOTTERY_LIST:
             run_all(LOTTERY_NAME)
     elif arg == "Today":
+        # 全部彩种当日模式
         for LOTTERY_NAME in LOTTERY_LIST:
             run_today(LOTTERY_NAME)
+    
+    elif arg in LOTTERY_LIST and len(sys.argv) >= 3 and sys.argv[2] == "Today":
+        # 单彩种当日模式
+        run_today(arg)
+    
     elif arg in LOTTERY_LIST and len(sys.argv) >= 3 and sys.argv[2].isdigit():
-        LOTTERY_NAME = arg
+        # 单彩种指定期号模式
         issue = sys.argv[2]
-        update_hit_stat(LOTTERY_NAME, issue)
+        update_hit_stat(arg, issue)
+
     elif arg.isdigit():
         print("❌ 错误：单独传期号不允许，必须指定 LOTTERY")
         sys.exit(1)
