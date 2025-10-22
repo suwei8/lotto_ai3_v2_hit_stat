@@ -285,34 +285,33 @@ def run_today(lottery_name: str):
     hit_stat_table = get_hit_stat_table(lottery_name)
     lottery_id = LOTTERY_ID_MAP.get(lottery_name)
 
-    open_df = pd.read_sql(
-        f"SELECT DISTINCT issue_name FROM {result_table}",
-        conn
-    )
+    open_df = pd.read_sql(f"SELECT DISTINCT issue_name FROM {result_table}", conn)
     open_issues = set(open_df["issue_name"].tolist())
 
-    pred_df = pd.read_sql(
-        f"SELECT DISTINCT issue_name FROM {prediction_table}",
-        conn
-    )
+    pred_df = pd.read_sql(f"SELECT DISTINCT issue_name FROM {prediction_table}", conn)
     pred_issues = set(pred_df["issue_name"].tolist())
 
     stat_columns = get_table_columns(conn, hit_stat_table)
     if "lottery_id" in stat_columns and lottery_id is not None:
         stat_df = pd.read_sql(
             f"SELECT DISTINCT issue_name FROM {hit_stat_table} WHERE lottery_id = %s",
-            conn,
-            params=[lottery_id]
+            conn, params=[lottery_id]
         )
     else:
-        stat_df = pd.read_sql(
-            f"SELECT DISTINCT issue_name FROM {hit_stat_table}",
-            conn
-        )
-    stat_issues = set(stat_df["issue_name"].tolist())
+        stat_df = pd.read_sql(f"SELECT DISTINCT issue_name FROM {hit_stat_table}", conn)
 
+    stat_issues = set(stat_df["issue_name"].tolist())
     todo_issues = sorted(list(open_issues & pred_issues - stat_issues))
-    print(f"🚦 [{lottery_name}] 待增量 {len(todo_issues)}：{todo_issues}")
+
+    if todo_issues:
+        print(f"✅ 模式：Today（增量模式）")
+        print(f"🎯 彩种：{lottery_name}")
+        print(f"📅 新增期号数量：{len(todo_issues)}")
+        print(f"📈 范围：{todo_issues[0]} → {todo_issues[-1]}")
+    else:
+        print(f"✅ 模式：Today（增量模式）")
+        print(f"🎯 彩种：{lottery_name}")
+        print("📭 无新增期号，无需更新。")
 
     for idx, issue in enumerate(todo_issues, 1):
         print(f"\n=== [{idx}/{len(todo_issues)}] 增量期号：{issue} ===")
